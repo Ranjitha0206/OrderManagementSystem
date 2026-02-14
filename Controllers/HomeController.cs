@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using OrderManagementSystem.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OrderManagementSystem.Controllers
 {
@@ -11,6 +12,17 @@ namespace OrderManagementSystem.Controllers
             return View();
         }
 
+        [Authorize(Roles = "Admin")]
+        public IActionResult AdminOnly()
+        {
+            return View();
+        }
+
+        [Authorize(Roles = "Manager")]
+        public IActionResult ManagerOnly()
+        {
+            return View();
+        }
         public IActionResult Privacy()
         {
             return View();

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 // This is needed for working with Entity Framework Core
 using Microsoft.EntityFrameworkCore;
-
+using OrderManagementSystem.Models;
 // Namespace of your project
 namespace OrderManagementSystem.Data
 {
@@ -25,6 +25,7 @@ namespace OrderManagementSystem.Data
         }
 
         // Later we will add our own tables here like:
-        // public DbSet<Order> Orders { get; set; }
+        public DbSet<Order> Orders { get; set; }
+
     }
 }

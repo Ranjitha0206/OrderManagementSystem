@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Identity;
 
 namespace OrderManagementSystem.Models
 {
+    public enum OrderStatus
+    {
+        Pending,
+        Approved,
+        Rejected
+    }
+
     public class Order
     {
 
@@ -29,5 +36,8 @@ namespace OrderManagementSystem.Models
 
         [ForeignKey("CreatedByUserId")]
         public IdentityUser? CreatedByUser { get; set; }
+
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
+
     }
 }

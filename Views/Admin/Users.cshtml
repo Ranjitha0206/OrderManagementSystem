@@ -1,0 +1,32 @@
+﻿@model IEnumerable<dynamic>
+
+<h2>User Management</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Change Role</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>@user.Role</td>
+                <td>
+                    @if (user.Role == "User")
+                    {
+                        <a asp-action="PromoteToManager" asp-route-userId="@user.Id">Promote to Manager</a>
+                    }
+                    else if (user.Role == "Manager")
+                    {
+                        <a asp-action="DemoteToUser" asp-route-userId="@user.Id">Demote to User</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -28,6 +28,10 @@
                 @Html.DisplayNameFor(model => model.CreatedByUserId)
 
             </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -50,11 +54,24 @@
                 @item.CreatedByUser?.UserName
             </td>
             <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                    @item.Status
+            </td>
+            <td>
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> 
+                    @if ((User.IsInRole("Admin") || User.IsInRole("Manager")) && item.Status == OrderStatus.Pending)
                     {
+                        <text> | </text>
                         <a asp-action="Edit" asp-route-id="@item.Id">Edit</a>
+                    }
+
+                    @* Approve / Reject only if Pending *@
+                    @if ((User.IsInRole("Manager") || User.IsInRole("Admin")) 
+                        && item.Status == OrderStatus.Pending)
+                    {
+                        <text> | </text>
+                        <a asp-action="Approve" asp-route-id="@item.Id">Approve</a>
+                        <text> | </text>
+                        <a asp-action="Reject" asp-route-id="@item.Id">Reject</a>
                     }
 
                     @if (User.IsInRole("Admin"))

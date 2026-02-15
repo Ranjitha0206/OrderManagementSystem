@@ -105,6 +105,7 @@ namespace OrderManagementSystem.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Edit(int id, [Bind("Id,ProductName,Quantity,Price,OrderDate")] Order order)
         {
             if (id != order.Id)
@@ -113,6 +114,11 @@ namespace OrderManagementSystem.Controllers
             var existingOrder = await _context.Orders.FindAsync(id);
             if (existingOrder == null)
                 return NotFound();
+
+            if (existingOrder.Status != OrderStatus.Pending)
+            {
+                return RedirectToAction(nameof(Index));
+            }
 
             // Update only editable fields
             existingOrder.ProductName = order.ProductName;
@@ -167,5 +173,28 @@ namespace OrderManagementSystem.Controllers
         {
             return _context.Orders.Any(e => e.Id == id);
         }
+
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+                return NotFound();
+            order.Status = OrderStatus.Approved;
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> Reject(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+                return NotFound();
+            order.Status = OrderStatus.Rejected;
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
     }
 }

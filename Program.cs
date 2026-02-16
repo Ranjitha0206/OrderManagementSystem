@@ -10,10 +10,14 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 // Connect ApplicationDbContext to SQL Server
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+//    options.UseSqlServer(
+//        builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite("Data Source=orders.db"));
+
 
 // Add Identity (Login / Register system)
 builder.Services.AddDefaultIdentity<IdentityUser>()

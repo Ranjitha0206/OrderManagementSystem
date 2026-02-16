@@ -28,11 +28,11 @@
                         </li>
                         @if(User.IsInRole("Admin"))
                         {
-                            <li class="nav-item">
+                            @* <li class="nav-item">
                                 <a class="nav-link" asp-controller="Home" asp-action="AdminOnly">
                                     Admin Panel
                                 </a>
-                            </li>
+                            </li> *@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Admin" asp-action="Users">
                                     User Management
@@ -40,14 +40,14 @@
                             </li>
                         }
 
-                        @if(User.IsInRole("Manager"))
+                       @*  @if(User.IsInRole("Manager"))
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Home" asp-action="ManagerOnly">
                                     Manager Panel
                                 </a>
                             </li>
-                        }
+                        } *@
                     
                         @if(User.Identity.IsAuthenticated)
                         {

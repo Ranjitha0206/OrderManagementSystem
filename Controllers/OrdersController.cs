@@ -10,6 +10,7 @@ using OrderManagementSystem.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using OrderManagementSystem.Services;
 
 namespace OrderManagementSystem.Controllers
 {
@@ -18,9 +19,12 @@ namespace OrderManagementSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public OrdersController(ApplicationDbContext context)
+        private readonly S3Service _s3Service;
+        public OrdersController(ApplicationDbContext context, S3Service s3Service)
         {
             _context = context;
+            _s3Service = s3Service;
+
         }
 
         // GET: Orders
@@ -42,22 +46,31 @@ namespace OrderManagementSystem.Controllers
 
 
     // GET: Orders/Details/5
-    public async Task<IActionResult> Details(int? id)
+
+        public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
             var order = await _context.Orders
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (order == null)
-            {
                 return NotFound();
+
+            // Generate pre-signed URL if file exists
+
+            if (!string.IsNullOrEmpty(order.FileKey))
+            {
+                ViewBag.FileUrl = _s3Service.GetPreSignedUrl(
+                    order.FileKey,
+                    order.OriginalFileName
+                );
             }
 
             return View(order);
         }
+
 
         // GET: Orders/Create
         public IActionResult Create()
@@ -70,19 +83,51 @@ namespace OrderManagementSystem.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ProductName,Quantity,Price,OrderDate")] Order order)
+        //public async Task<IActionResult> Create([Bind("ProductName,Quantity,Price,OrderDate")] Order order)
+        public async Task<IActionResult> Create(Order order, IFormFile? file)
         {
             order.CreatedByUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            ModelState.Remove("CreatedByUserId"); // Important
+
+            // Prevent validation error for CreatedByUserId
+            ModelState.Remove("CreatedByUserId");
 
             if (ModelState.IsValid)
             {
+                // Only Admin can upload
+                if (file != null && User.IsInRole("Admin"))
+                {
+                    // File size limit 2MB
+                    if (file.Length > 2 * 1024 * 1024)
+                    {
+                        ModelState.AddModelError("File", "File size must be less than 2MB.");
+                        return View(order);
+                    }
+
+                    // Allowed file types
+                    var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        ModelState.AddModelError("File", "Only PDF, JPG, and PNG files are allowed.");
+                        return View(order);
+                    }
+
+                    // Upload to S3 and store only the key
+                    var fileKey = await _s3Service.UploadFileAsync(file);
+                    order.FileKey = fileKey;
+                    order.OriginalFileName = file.FileName;
+                }
+
                 _context.Add(order);
                 await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
+
             return View(order);
         }
+
 
         // GET: Orders/Edit/5
         public async Task<IActionResult> Edit(int? id)

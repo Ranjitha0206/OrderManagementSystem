@@ -36,8 +36,9 @@ namespace OrderManagementSystem.Models
 
         [ForeignKey("CreatedByUserId")]
         public IdentityUser? CreatedByUser { get; set; }
-
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
+        public string? FileKey { get; set; }
+        public string? OriginalFileName { get; set; }
 
     }
 }

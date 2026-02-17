@@ -12,19 +12,21 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 // Environment-based database configuration
-if (builder.Environment.IsDevelopment())
-{
-    // SQL Server for local development
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-else
-{
-    // SQLite for production (Azure Free)
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite("Data Source=orders.db"));
-}
+//if (builder.Environment.IsDevelopment())
+//{
+//    // SQL Server for local development
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseSqlServer(
+//            builder.Configuration.GetConnectionString("DefaultConnection")));
+//}
+//else
+//{
+//    // SQLite for production (Azure Free)
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseSqlite("Data Source=orders.db"));
+//}
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite("Data Source=orders.db"));
 
 // Identity + Roles
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>

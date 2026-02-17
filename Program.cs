@@ -5,21 +5,15 @@ using OrderManagementSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
-// Connect ApplicationDbContext to SQL Server
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-
-//    options.UseSqlServer(
-//        builder.Configuration.GetConnectionString("DefaultConnection")));
-
+// Use SQLite (for Render deployment)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite("Data Source=orders.db"));
 
-
-// Add Identity (Login / Register system)
+// Identity
 builder.Services.AddDefaultIdentity<IdentityUser>()
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -28,11 +22,18 @@ builder.Services.AddScoped<S3Service>();
 
 var app = builder.Build();
 
-// Create roles at startup
+// ---------------------------
+// Database Migration + Seeding
+// ---------------------------
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider
-        .GetRequiredService<RoleManager<IdentityRole>>();
+    var services = scope.ServiceProvider;
+    var dbContext = services.GetRequiredService<ApplicationDbContext>();
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+
+    // Automatically create DB + apply migrations
+    dbContext.Database.Migrate();
 
     string[] roles = { "Admin", "Manager", "User" };
 
@@ -44,10 +45,8 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-
     string adminEmail = "admin@test.com";
-    string adminPassword = "J@ehyun97";
+    string adminPassword = "Admin@123";
 
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
@@ -56,46 +55,38 @@ using (var scope = app.Services.CreateScope())
         adminUser = new IdentityUser
         {
             UserName = adminEmail,
-            Email = adminEmail
+            Email = adminEmail,
+            EmailConfirmed = true
         };
 
-       var result = await userManager.CreateAsync(adminUser, adminPassword);
-
-        if(!result.Succeeded)
-        {
-            foreach(var error in result.Errors)
-            {
-                Console.WriteLine(error.Description);
-            }
-        }
+        await userManager.CreateAsync(adminUser, adminPassword);
     }
 
-    //Assign Admin Role if not already assigned
-    if(!await userManager.IsInRoleAsync(adminUser, "Admin"))
+    if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
     {
         await userManager.AddToRoleAsync(adminUser, "Admin");
     }
 }
 
-// Configure the HTTP request pipeline.
+// Middleware
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
-
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages();
+
 app.Run();

@@ -1,38 +1,56 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using OrderManagementSystem.Data;
 using OrderManagementSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ----------------------------
+// Add services
+// ----------------------------
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
-// Connect ApplicationDbContext to SQL Server
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Environment-based database configuration
+if (builder.Environment.IsDevelopment())
+{
+    // SQL Server for local development
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection")));
+}
+else
+{
+    // SQLite for production (Azure Free)
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=orders.db"));
+}
 
-//    options.UseSqlServer(
-//        builder.Configuration.GetConnectionString("DefaultConnection")));
+// Identity + Roles
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<ApplicationDbContext>();
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=orders.db"));
-
-
-// Add Identity (Login / Register system)
-builder.Services.AddDefaultIdentity<IdentityUser>()
-    .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>();
-
+// AWS S3 Service
 builder.Services.AddScoped<S3Service>();
 
 var app = builder.Build();
 
-// Create roles at startup
+// ----------------------------
+// Create Roles + Admin at Startup
+// ----------------------------
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider
-        .GetRequiredService<RoleManager<IdentityRole>>();
+    var services = scope.ServiceProvider;
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+    var dbContext = services.GetRequiredService<ApplicationDbContext>();
+
+    // Ensure DB created (important for SQLite in production)
+    dbContext.Database.Migrate();
 
     string[] roles = { "Admin", "Manager", "User" };
 
@@ -44,10 +62,8 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-
     string adminEmail = "admin@test.com";
-    string adminPassword = "J@ehyun97";
+    string adminPassword = "Admin@123"; // change for production
 
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
@@ -56,46 +72,50 @@ using (var scope = app.Services.CreateScope())
         adminUser = new IdentityUser
         {
             UserName = adminEmail,
-            Email = adminEmail
+            Email = adminEmail,
+            EmailConfirmed = true
         };
 
-       var result = await userManager.CreateAsync(adminUser, adminPassword);
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
 
-        if(!result.Succeeded)
+        if (!result.Succeeded)
         {
-            foreach(var error in result.Errors)
+            foreach (var error in result.Errors)
             {
                 Console.WriteLine(error.Description);
             }
         }
     }
 
-    //Assign Admin Role if not already assigned
-    if(!await userManager.IsInRoleAsync(adminUser, "Admin"))
+    if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
     {
         await userManager.AddToRoleAsync(adminUser, "Admin");
     }
 }
 
-// Configure the HTTP request pipeline.
+// ----------------------------
+// Configure Middleware
+// ----------------------------
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
-
+// MVC default route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// Razor Pages (Identity)
 app.MapRazorPages();
+
 app.Run();
